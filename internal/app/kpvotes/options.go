@@ -20,6 +20,8 @@ type Options struct {
 	TargetFile    string
 	IMDbCacheFile string
 
+	TargetChunkSize uint
+
 	IsDebug bool
 }
 

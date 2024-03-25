@@ -46,7 +46,7 @@ func (r *runner) Run(ctx context.Context, opt Options) error {
 
 	log.Info("Writing votes")
 
-	if err := r.writer.WriteToFile(ctx, votes, opt.TargetFile); err != nil {
+	if err := r.writer.WriteToFile(ctx, votes, opt.TargetFile, opt.TargetChunkSize); err != nil {
 		return fmt.Errorf("failed to write votes: %w", err)
 	}
 

@@ -15,7 +15,6 @@ import (
 
 const (
 	diLogger         = "logger"
-	diDownloader     = "downloader"
 	diImdbCache      = "imdb_cache"
 	diImdbDataLoader = "imdb_dataloader"
 	diVotesReader    = "votes_reader"
@@ -48,16 +47,6 @@ func getBuilder(ctx context.Context, log *zap.Logger, opt Options) (*godi.Builde
 			},
 		},
 		godi.Def{
-			Name: diDownloader,
-			Build: func(ctn *godi.Container) (obj any, err error) {
-				return downloader.NewStdDownloader(
-					requireLogger(ctn),
-					kinopoisk.TimeoutVotes,
-					opt.ProxyURL,
-				), nil
-			},
-		},
-		godi.Def{
 			Name: diImdbCache,
 			Build: func(ctn *godi.Container) (obj any, err error) {
 				cache := imdb.NewMemoryCache(requireLogger(ctn))
@@ -83,9 +72,15 @@ func getBuilder(ctx context.Context, log *zap.Logger, opt Options) (*godi.Builde
 		godi.Def{
 			Name: diImdbDataLoader,
 			Build: func(ctn *godi.Container) (obj any, err error) {
+				logger := requireLogger(ctn)
+
 				return imdb.NewDataLoader(
-					requireLogger(ctn),
-					requireDownloader(ctn),
+					logger,
+					downloader.NewStdDownloader(
+						logger,
+						imdb.TimeoutFind,
+						opt.ProxyURL,
+					),
 					requireImdbCache(ctn),
 				), nil
 			},
@@ -93,9 +88,15 @@ func getBuilder(ctx context.Context, log *zap.Logger, opt Options) (*godi.Builde
 		godi.Def{
 			Name: diVotesReader,
 			Build: func(ctn *godi.Container) (obj any, err error) {
+				logger := requireLogger(ctn)
+
 				return reader.NewVotesReader(
-					requireLogger(ctn),
-					requireDownloader(ctn),
+					logger,
+					downloader.NewStdDownloader(
+						logger,
+						kinopoisk.TimeoutVotes,
+						opt.ProxyURL,
+					),
 					requireImdbDataLoader(ctn),
 				), nil
 			},
@@ -126,10 +127,6 @@ func getBuilder(ctx context.Context, log *zap.Logger, opt Options) (*godi.Builde
 
 func requireLogger(ctn *godi.Container) *zap.Logger {
 	return ctn.Get(diLogger).(*zap.Logger)
-}
-
-func requireDownloader(ctn *godi.Container) downloader.Downloader {
-	return ctn.Get(diDownloader).(downloader.Downloader)
 }
 
 func requireImdbCache(ctn *godi.Container) imdb.Cache {

@@ -5,9 +5,13 @@ import (
 	"encoding/csv"
 	"fmt"
 	"os"
+	"path/filepath"
+	"strings"
 
 	"github.com/kukymbr/kinopoiskexport/internal/pkg/kinopoisk"
+	"github.com/kukymbr/kinopoiskexport/internal/pkg/utils"
 	"go.uber.org/zap"
+	"golang.org/x/sync/errgroup"
 )
 
 func NewIMDbCSVVotesWriter(log *zap.Logger) VotesWriter {
@@ -17,14 +21,57 @@ func NewIMDbCSVVotesWriter(log *zap.Logger) VotesWriter {
 }
 
 type VotesWriter interface {
-	WriteToFile(ctx context.Context, votes kinopoisk.Votes, targetPath string) error
+	WriteToFile(ctx context.Context, votes kinopoisk.Votes, targetPath string, chunkSize uint) error
 }
 
 type votesIMDbCSVVotesWriter struct {
 	log *zap.Logger
 }
 
-func (v *votesIMDbCSVVotesWriter) WriteToFile(ctx context.Context, votes kinopoisk.Votes, targetPath string) error {
+func (v *votesIMDbCSVVotesWriter) WriteToFile(
+	ctx context.Context,
+	votes kinopoisk.Votes,
+	targetPath string,
+	chunkSize uint,
+) error {
+	if chunkSize == 0 {
+		return v.writeToFile(ctx, votes, targetPath)
+	}
+
+	chunks := utils.Chunk(votes, chunkSize)
+
+	targetPath = utils.FixSeparators(targetPath)
+	dir := filepath.Dir(targetPath)
+	filename := filepath.Base(targetPath)
+	ext := filepath.Ext(filename)
+
+	if ext != "" {
+		filename, _ = strings.CutSuffix(filename, ext)
+	}
+
+	getTargetPath := func(chunkN int) string {
+		return filepath.Join(dir, filename+"."+fmt.Sprintf("%d", chunkN)+ext)
+	}
+
+	eg, ctx := errgroup.WithContext(ctx)
+
+	for i, votes := range chunks {
+		chunkN := i
+		votes := votes
+
+		eg.Go(func() error {
+			return v.writeToFile(ctx, votes, getTargetPath(chunkN))
+		})
+	}
+
+	return eg.Wait()
+}
+
+func (v *votesIMDbCSVVotesWriter) writeToFile(
+	ctx context.Context,
+	votes kinopoisk.Votes,
+	targetPath string,
+) error {
 	if err := ctx.Err(); err != nil {
 		return err
 	}
