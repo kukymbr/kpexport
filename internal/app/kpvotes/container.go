@@ -16,6 +16,7 @@ import (
 const (
 	diLogger         = "logger"
 	diDownloader     = "downloader"
+	diImdbCache      = "imdb_cache"
 	diImdbDataLoader = "imdb_dataloader"
 	diVotesReader    = "votes_reader"
 	diVotesWriter    = "votes_writer"
@@ -36,7 +37,7 @@ func buildContainer(ctx context.Context, log *zap.Logger, opt Options) (*godi.Co
 	return ctn, nil
 }
 
-func getBuilder(_ context.Context, log *zap.Logger, opt Options) (*godi.Builder, error) {
+func getBuilder(ctx context.Context, log *zap.Logger, opt Options) (*godi.Builder, error) {
 	builder := &godi.Builder{}
 
 	err := builder.Add(
@@ -57,11 +58,35 @@ func getBuilder(_ context.Context, log *zap.Logger, opt Options) (*godi.Builder,
 			},
 		},
 		godi.Def{
+			Name: diImdbCache,
+			Build: func(ctn *godi.Container) (obj any, err error) {
+				cache := imdb.NewMemoryCache(requireLogger(ctn))
+
+				if opt.IMDbCacheFile != "" {
+					if err := cache.ImportTitlesIDs(ctx, opt.IMDbCacheFile); err != nil {
+						return nil, err
+					}
+				}
+
+				return cache, nil
+			},
+			Close: func(obj any) (err error) {
+				cache := obj.(imdb.Cache)
+
+				if opt.IMDbCacheFile != "" {
+					_ = cache.ExportTitlesIDs(context.Background(), opt.IMDbCacheFile, true)
+				}
+
+				return nil
+			},
+		},
+		godi.Def{
 			Name: diImdbDataLoader,
 			Build: func(ctn *godi.Container) (obj any, err error) {
 				return imdb.NewDataLoader(
 					requireLogger(ctn),
 					requireDownloader(ctn),
+					requireImdbCache(ctn),
 				), nil
 			},
 		},
@@ -105,6 +130,10 @@ func requireLogger(ctn *godi.Container) *zap.Logger {
 
 func requireDownloader(ctn *godi.Container) downloader.Downloader {
 	return ctn.Get(diDownloader).(downloader.Downloader)
+}
+
+func requireImdbCache(ctn *godi.Container) imdb.Cache {
+	return ctn.Get(diImdbCache).(imdb.Cache)
 }
 
 func requireImdbDataLoader(ctn *godi.Container) imdb.DataLoader {

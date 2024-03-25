@@ -12,28 +12,35 @@ import (
 )
 
 const (
-	findURL = "https://www.imdb.com/find/"
+	TitleURL = "https://www.imdb.com/title/"
+	findURL  = "https://www.imdb.com/find/"
 )
 
-func NewDataLoader(log *zap.Logger, downloader downloader.Downloader) DataLoader {
+func NewDataLoader(log *zap.Logger, downloader downloader.Downloader, cache Cache) DataLoader {
 	return &dataLoader{
 		log:        log,
 		downloader: downloader,
+		cache:      cache,
 	}
 }
 
 type DataLoader interface {
-	GetIDByTitle(ctx context.Context, title string) (string, error)
+	GetIDByTitle(ctx context.Context, title string) (TitleID, error)
 }
 
 type dataLoader struct {
 	log        *zap.Logger
 	downloader downloader.Downloader
+	cache      Cache
 }
 
-func (d *dataLoader) GetIDByTitle(ctx context.Context, title string) (string, error) {
+func (d *dataLoader) GetIDByTitle(ctx context.Context, title string) (TitleID, error) {
 	if err := ctx.Err(); err != nil {
 		return "", err
+	}
+
+	if cached, err := d.cache.GetTitleID(ctx, title); err == nil && cached != "" {
+		return cached, nil
 	}
 
 	query := url.Values{}
@@ -82,5 +89,9 @@ func (d *dataLoader) GetIDByTitle(ctx context.Context, title string) (string, er
 		return "", fmt.Errorf("no id")
 	}
 
-	return id, nil
+	tId := TitleID(id)
+
+	_ = d.cache.StoreTitleID(ctx, title, tId)
+
+	return tId, nil
 }

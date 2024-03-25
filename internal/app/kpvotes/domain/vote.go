@@ -1,6 +1,10 @@
 package domain
 
-import "time"
+import (
+	"time"
+
+	"github.com/kukymbr/kinopoiskexport/internal/pkg/imdb"
+)
 
 type Vote struct {
 	MovieURL          string
@@ -12,7 +16,7 @@ type Vote struct {
 
 	Rate uint8
 
-	ImdbID string
+	ImdbID imdb.TitleID
 }
 
 func (v *Vote) GetOriginalTitle() string {
@@ -27,4 +31,12 @@ func (v *Vote) GetOriginalTitle() string {
 	}
 
 	return title
+}
+
+func (v *Vote) GetIMDbURL() string {
+	if v.ImdbID == "" {
+		return ""
+	}
+
+	return imdb.TitleURL + v.ImdbID.String()
 }

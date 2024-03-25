@@ -14,9 +14,11 @@ const (
 )
 
 type Options struct {
-	UserID     kinopoisk.UserID
-	ProxyURL   *url.URL
-	TargetFile string
+	UserID   kinopoisk.UserID
+	ProxyURL *url.URL
+
+	TargetFile    string
+	IMDbCacheFile string
 
 	IsDebug bool
 }

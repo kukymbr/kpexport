@@ -47,7 +47,8 @@ func (v *votesIMDbCSVVotesWriter) WriteToFile(ctx context.Context, votes domain.
 		"Your Rating",
 		"Date Rated",
 		"Title",
-		"URL", "Title Type", "IMDb Rating", "Runtime (mins)",
+		"URL",
+		"Title Type", "IMDb Rating", "Runtime (mins)",
 		"Year", "Genres", "Num Votes", "Release Date", "Directors",
 	}
 
@@ -64,11 +65,12 @@ func (v *votesIMDbCSVVotesWriter) WriteToFile(ctx context.Context, votes domain.
 		log.Debugf("Writing row #%d", i)
 
 		row := []string{
-			"tt0102926",
+			vote.ImdbID.String(),
 			fmt.Sprintf("%d", vote.Rate),
 			vote.Timestamp.Format("2006-01-02"),
 			vote.GetOriginalTitle(),
-			"", "", "", "", "",
+			vote.GetIMDbURL(),
+			"", "", "", "",
 			"", "", "", "", "",
 		}
 

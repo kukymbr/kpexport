@@ -49,6 +49,7 @@ func initCommand(ctx context.Context) *cobra.Command {
 	}
 
 	root.Flags().StringVar(&opt.TargetFile, "target", "", "target .csv file path")
+	root.Flags().StringVar(&opt.IMDbCacheFile, "imdb_cache", "", "imdb titles cache file path")
 	root.Flags().BoolVar(&opt.IsDebug, "debug", false, "enable the debug mode")
 	root.Flags().Var(&opt.UserID, "uid", "kinopoisk user ID")
 

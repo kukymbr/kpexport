@@ -91,10 +91,15 @@ func (r *votesReader) readPage(
 		_ = body.Close()
 	}()
 
-	return r.parseHTML(ctx, log, body)
+	return r.parseHTML(ctx, log, body, pageN)
 }
 
-func (r *votesReader) parseHTML(ctx context.Context, log *zap.Logger, body io.Reader) (domain.Votes, error) {
+func (r *votesReader) parseHTML(
+	ctx context.Context,
+	log *zap.Logger,
+	body io.Reader,
+	pageN uint16,
+) (domain.Votes, error) {
 	if err := ctx.Err(); err != nil {
 		return nil, err
 	}
@@ -118,7 +123,7 @@ func (r *votesReader) parseHTML(ctx context.Context, log *zap.Logger, body io.Re
 
 	votes := make(domain.Votes, 0, len(itemNodes))
 
-	for _, node := range itemNodes {
+	for i, node := range itemNodes {
 		if err := ctx.Err(); err != nil {
 			return nil, err
 		}
@@ -141,6 +146,8 @@ func (r *votesReader) parseHTML(ctx context.Context, log *zap.Logger, body io.Re
 				continue
 			}
 		}
+
+		log.Info(fmt.Sprintf("[read][page#%d][%03d/%03d] done", pageN, i+1, len(itemNodes)))
 	}
 
 	return votes, nil
@@ -188,6 +195,17 @@ func (r *votesReader) parseItemNode(log *zap.Logger, node *html.Node) *domain.Vo
 	}
 
 	return &vote
+}
+
+func (r *votesReader) processParsedVote(ctx context.Context, vote *domain.Vote) {
+	imdbID, err := r.imdbDataLoader.GetIDByTitle(ctx, vote.GetOriginalTitle())
+	if err != nil {
+		r.log.Debug("failed to get IMDb ID for " + vote.GetOriginalTitle() + ": " + err.Error())
+
+		return
+	}
+
+	vote.ImdbID = imdbID
 }
 
 func xpathClass(class string) string {

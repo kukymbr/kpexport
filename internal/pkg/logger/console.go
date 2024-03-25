@@ -25,6 +25,7 @@ func NewDefaultConsoleLogger(isDebug bool) *zap.Logger {
 	consoleErrors := zapcore.Lock(os.Stderr)
 
 	encoderConf := zap.NewProductionEncoderConfig()
+	encoderConf.EncodeTime = zapcore.TimeEncoderOfLayout("060102 15:04:05")
 	encoderConf.EncodeLevel = zapcore.CapitalColorLevelEncoder
 
 	jsonEncoder := zapcore.NewConsoleEncoder(encoderConf)

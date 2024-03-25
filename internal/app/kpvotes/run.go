@@ -19,6 +19,10 @@ func Run(ctx context.Context, log *zap.Logger, opt Options) error {
 		return err
 	}
 
+	defer func() {
+		_ = ctn.Close()
+	}()
+
 	runner := requireRunner(ctn)
 
 	return runner.Run(ctx, opt)
