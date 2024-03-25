@@ -6,7 +6,7 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/kukymbr/kinopoiskexport/internal/app/kpvotes/domain"
+	"github.com/kukymbr/kinopoiskexport/internal/pkg/kinopoisk"
 	"go.uber.org/zap"
 )
 
@@ -17,14 +17,14 @@ func NewIMDbCSVVotesWriter(log *zap.Logger) VotesWriter {
 }
 
 type VotesWriter interface {
-	WriteToFile(ctx context.Context, votes domain.Votes, targetPath string) error
+	WriteToFile(ctx context.Context, votes kinopoisk.Votes, targetPath string) error
 }
 
 type votesIMDbCSVVotesWriter struct {
 	log *zap.Logger
 }
 
-func (v *votesIMDbCSVVotesWriter) WriteToFile(ctx context.Context, votes domain.Votes, targetPath string) error {
+func (v *votesIMDbCSVVotesWriter) WriteToFile(ctx context.Context, votes kinopoisk.Votes, targetPath string) error {
 	if err := ctx.Err(); err != nil {
 		return err
 	}
@@ -69,7 +69,7 @@ func (v *votesIMDbCSVVotesWriter) WriteToFile(ctx context.Context, votes domain.
 			fmt.Sprintf("%d", vote.Rate),
 			vote.Timestamp.Format("2006-01-02"),
 			vote.GetOriginalTitle(),
-			vote.GetIMDbURL(),
+			vote.ImdbID.ToURL(),
 			"", "", "", "",
 			"", "", "", "", "",
 		}

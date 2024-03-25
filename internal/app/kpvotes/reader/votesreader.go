@@ -11,7 +11,6 @@ import (
 	"time"
 
 	"github.com/antchfx/htmlquery"
-	"github.com/kukymbr/kinopoiskexport/internal/app/kpvotes/domain"
 	"github.com/kukymbr/kinopoiskexport/internal/pkg/downloader"
 	"github.com/kukymbr/kinopoiskexport/internal/pkg/imdb"
 	"github.com/kukymbr/kinopoiskexport/internal/pkg/kinopoisk"
@@ -30,7 +29,7 @@ func NewVotesReader(log *zap.Logger, downloader downloader.Downloader, imdbLoade
 }
 
 type VotesReader interface {
-	ReadVotes(ctx context.Context, userID kinopoisk.UserID) (domain.Votes, error)
+	ReadVotes(ctx context.Context, userID kinopoisk.UserID) (kinopoisk.Votes, error)
 }
 
 type votesReader struct {
@@ -39,10 +38,10 @@ type votesReader struct {
 	imdbDataLoader imdb.DataLoader
 }
 
-func (r *votesReader) ReadVotes(ctx context.Context, userID kinopoisk.UserID) (domain.Votes, error) {
+func (r *votesReader) ReadVotes(ctx context.Context, userID kinopoisk.UserID) (kinopoisk.Votes, error) {
 	log := r.log.With(zap.String("uid", userID.String()))
 	pageN := uint16(1)
-	votes := make(domain.Votes, 0)
+	votes := make(kinopoisk.Votes, 0)
 
 	// TODO: download pages in several goroutines
 	for {
@@ -69,7 +68,7 @@ func (r *votesReader) readPage(
 	log *zap.Logger,
 	userID kinopoisk.UserID,
 	pageN uint16,
-) (domain.Votes, error) {
+) (kinopoisk.Votes, error) {
 	if err := ctx.Err(); err != nil {
 		return nil, err
 	}
@@ -99,7 +98,7 @@ func (r *votesReader) parseHTML(
 	log *zap.Logger,
 	body io.Reader,
 	pageN uint16,
-) (domain.Votes, error) {
+) (kinopoisk.Votes, error) {
 	if err := ctx.Err(); err != nil {
 		return nil, err
 	}
@@ -121,7 +120,7 @@ func (r *votesReader) parseHTML(
 		return nil, fmt.Errorf("failed to parse items: %w", err)
 	}
 
-	votes := make(domain.Votes, 0, len(itemNodes))
+	votes := make(kinopoisk.Votes, 0, len(itemNodes))
 
 	for i, node := range itemNodes {
 		if err := ctx.Err(); err != nil {
@@ -153,7 +152,7 @@ func (r *votesReader) parseHTML(
 	return votes, nil
 }
 
-func (r *votesReader) parseItemNode(log *zap.Logger, node *html.Node) *domain.Vote {
+func (r *votesReader) parseItemNode(log *zap.Logger, node *html.Node) *kinopoisk.Vote {
 	nameRusNode, err := htmlquery.Query(node, `//div[@class="nameRus"]/a[@href]`)
 	if err != nil {
 		log.Warn("no .nameRus: " + err.Error())
@@ -167,7 +166,7 @@ func (r *votesReader) parseItemNode(log *zap.Logger, node *html.Node) *domain.Vo
 		return nil
 	}
 
-	vote := domain.Vote{}
+	vote := kinopoisk.Vote{}
 	vote.MovieURL = htmlquery.SelectAttr(nameRusNode, "href")
 	vote.MovieNameRu, vote.MovieYear = parseRuName(htmlquery.InnerText(nameRusNode))
 
@@ -197,7 +196,7 @@ func (r *votesReader) parseItemNode(log *zap.Logger, node *html.Node) *domain.Vo
 	return &vote
 }
 
-func (r *votesReader) processParsedVote(ctx context.Context, vote *domain.Vote) {
+func (r *votesReader) processParsedVote(ctx context.Context, vote *kinopoisk.Vote) {
 	imdbID, err := r.imdbDataLoader.GetIDByTitle(ctx, vote.GetOriginalTitle())
 	if err != nil {
 		r.log.Debug("failed to get IMDb ID for " + vote.GetOriginalTitle() + ": " + err.Error())

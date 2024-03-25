@@ -12,8 +12,7 @@ import (
 )
 
 const (
-	TitleURL = "https://www.imdb.com/title/"
-	findURL  = "https://www.imdb.com/find/"
+	findURL = Host + "/find/"
 )
 
 func NewDataLoader(log *zap.Logger, downloader downloader.Downloader, cache Cache) DataLoader {

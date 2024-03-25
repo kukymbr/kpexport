@@ -1,4 +1,4 @@
-package domain
+package kinopoisk
 
 import (
 	"time"
@@ -31,12 +31,4 @@ func (v *Vote) GetOriginalTitle() string {
 	}
 
 	return title
-}
-
-func (v *Vote) GetIMDbURL() string {
-	if v.ImdbID == "" {
-		return ""
-	}
-
-	return imdb.TitleURL + v.ImdbID.String()
 }
